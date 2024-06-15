@@ -28,6 +28,69 @@ This repository contains the code used for our paper: Reinforcement Learning for
 # Training a Language Model
 ## TWC:
 ### Train single strategy $P_i$:
+        python3 -m lamorel_launcher.launch --config-path "./experiments/TWC/configs/custom/" 
+                   --config-name "local_gpu_config"        
+                   rl_script_args.path="/experiments/TWC/main_pi.py"
+                   rl_script_args.output_dir="." 
+                   lamorel_args.accelerate_args.machine_rank=0 
+                   rl_script_args.gradient_batch_size=4 
+                   lamorel_args.llm_args.model_path="google/flan-t5-small"  
+                   rl_script_args.prompt_id=0 # P_i number from 0 to 3 
+                   rl_script_args.seed= 1   
+                   lamorel_args.llm_args.model_type="seq2seq"
 ### Train single strategy $P_{all}$:
+        python3 -m lamorel_launcher.launch --config-path "./experiments/TWC/configs/custom/" 
+                   --config-name "local_gpu_config"        
+                   rl_script_args.path="/experiments/TWC/main_pAll.py"
+                   rl_script_args.output_dir="." 
+                   lamorel_args.accelerate_args.machine_rank=0 
+                   rl_script_args.gradient_batch_size=4 
+                   lamorel_args.llm_args.model_path="google/flan-t5-small"  
+                   rl_script_args.prompt_id=0 # useless we train on all prompts 
+                   rl_script_args.seed= 1   
+                   lamorel_args.llm_args.model_type="seq2seq"
 ### Train single strategy $Contrastive_{P_i}$:
-
+        python3 -m lamorel_launcher.launch --config-path "./experiments/TWC/configs/custom/" 
+                   --config-name "local_gpu_config"        
+                   rl_script_args.path="/experiments/TWC/main_Contrastive.py"
+                   rl_script_args.output_dir="." 
+                   lamorel_args.accelerate_args.machine_rank=0 
+                   rl_script_args.gradient_batch_size=4 
+                   lamorel_args.llm_args.model_path="google/flan-t5-small"  
+                   rl_script_args.prompt_id=0 # P_i number from 0 to 3 , Contrastive applied to all others
+                   rl_script_args.seed= 1   
+                   lamorel_args.llm_args.model_type="seq2seq"
+## BabyAI-Text:
+### Train single strategy $P_i$:
+        python3 -m lamorel_launcher.launch --config-path "./experiments/TWC/configs/custom/" 
+                   --config-name "local_gpu_config"        
+                   rl_script_args.path="/experiments/BabyAI-Text/main_pi.py"
+                   rl_script_args.output_dir="." 
+                   lamorel_args.accelerate_args.machine_rank=0 
+                   rl_script_args.gradient_batch_size=4 
+                   lamorel_args.llm_args.model_path="google/flan-t5-small"  
+                   rl_script_args.prompt_id=0 # P_i number from 0 to 3 
+                   rl_script_args.seed= 1   
+                   lamorel_args.llm_args.model_type="seq2seq"
+### Train single strategy $P_{all}$:
+        python3 -m lamorel_launcher.launch --config-path "./experiments/BabyAI-Text/configs/custom/" 
+                   --config-name "local_gpu_config"        
+                   rl_script_args.path="/experiments/TWC/main_pAll.py"
+                   rl_script_args.output_dir="." 
+                   lamorel_args.accelerate_args.machine_rank=0 
+                   rl_script_args.gradient_batch_size=4 
+                   lamorel_args.llm_args.model_path="google/flan-t5-small"  
+                   rl_script_args.prompt_id=0 # useless we train on all prompts 
+                   rl_script_args.seed= 1   
+                   lamorel_args.llm_args.model_type="seq2seq"
+### Train single strategy $Contrastive_{P_i}$:
+        python3 -m lamorel_launcher.launch --config-path "./experiments/TWC/configs/custom/" 
+                   --config-name "local_gpu_config"        
+                   rl_script_args.path="/experiments/BabyAI-Text/main_Contrastive.py"
+                   rl_script_args.output_dir="." 
+                   lamorel_args.accelerate_args.machine_rank=0 
+                   rl_script_args.gradient_batch_size=4 
+                   lamorel_args.llm_args.model_path="google/flan-t5-small"  
+                   rl_script_args.prompt_id=0 # P_i number from 0 to 3 , Contrastive applied to all others
+                   rl_script_args.seed= 1   
+                   lamorel_args.llm_args.model_type="seq2seq"
