@@ -3,7 +3,7 @@ lamorel_args:
   allow_subgraph_use_whith_gradient: false
   distributed_setup_args:
     n_rl_processes: 1
-    n_llm_processes: 1
+    n_llm_processes: 4
   accelerate_args:
     config_file: ../configs/accelerate/default_config.yaml
     machine_rank: 0
@@ -25,7 +25,7 @@ rl_script_args:
   path: ???
   seed: 1
   # ppo
-  ppo_epochs: 1 #4
+  ppo_epochs: 4
   lam: 0.99
   gamma: 0.99
   lr: 1e-4
@@ -33,31 +33,33 @@ rl_script_args:
   value_loss_coef: 0.5
   clip_eps: 0.2
   max_grad_norm: 0.5
-  minibatch_size: 8
+  minibatch_size: 250
   use_all_params_for_optim: false
   quantized_optimizer: false
   # llm
   use_lora: true
-  gradient_batch_size: 1
+  gradient_batch_size: 2
   gradient_minibatch_size:
   ## LoRA
-  lora_r: 16
-  lora_alpha: 32
-  lora_target_modules:  # ["q", "v", "k", "wi", "wo", "lm_head"]
+  lora_r: 32
+  lora_alpha: 16
+  lora_target_modules:   ["q", "v", "k", "wi", "wo", "lm_head"]
   # rl training
-  number_envs: 2
+  number_envs: 16
   max_ep_len: 200
-  epochs: 100
-  steps_per_epoch: 200
-  save_freq: 1
+  epochs: 700
+  prompt_id: 2
+  steps_per_epoch: 500
+  save_freq: 25
   output_dir: ???
-  loading_path: #'/home/cromac/Documents/Projects/PhD/Grounding_LLMs/Large-Scale_Grounding_LLMs_with_online_RL/outputs/results/BabyAIMixed_FlanT5-780M/seed_1/epochs_400-420/'
-  transitions_buffer_len: 3
+  loading_path:
+  transitions_buffer_len: 1
   # environment
   name_environment: 'babyai_text' # 'babyai_text', 'alfworld'
   task: 'BabyAI-MixedTrainLocal-v0'
   ## BabyAI-specific
   action_space: ["turn_left","turn_right","go_forward","pick_up","drop","toggle"]
-  ## AlfWorld-specific
-  config_file: '/home/cromac/Documents/Projects/PhD/Grounding_LLMs/alfworld/configs/base_config.yaml'
+  ## TWC-specific
+  twc_levels:
+  config_file:
   train_mode: true
