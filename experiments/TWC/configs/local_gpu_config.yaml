@@ -48,7 +48,7 @@ rl_script_args:
   number_envs: 16
   max_ep_len: 200
   epochs: 700
-  prompt_id: 2
+  prompt_id: 0
   steps_per_epoch: 500
   save_freq: 25
   output_dir: ???
