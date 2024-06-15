@@ -15,7 +15,7 @@ This repository contains the code used for our paper: Reinforcement Learning for
        cd gym-minigrid; pip install -e.; cd ..
        pip install -e .
 * TWC:
-  
+
        pip install textworld
        git clone https://github.com/IBM/commonsense-rl
        cd commonsense-rl/game_generation
@@ -31,9 +31,9 @@ This repository contains the code used for our paper: Reinforcement Learning for
 # Training a Language Model
 ## TWC:
 ### Train single strategy $P_i$:
-        python3 -m lamorel_launcher.launch --config-path "./experiments/TWC/configs"  #if absolute path doesnt work use relative path
+        python3 -m lamorel_launcher.launch --config-path PROJECT_PATH/experiments/TWC/configs" 
                    --config-name "local_gpu_config"        
-                   rl_script_args.path="./experiments/TWC/main_pi.py"
+                   rl_script_args.path=PROJECT_PATH/experiments/TWC/main_pi.py
                    rl_script_args.output_dir="." 
                    lamorel_args.accelerate_args.machine_rank=0 
                    rl_script_args.gradient_batch_size=4 
@@ -43,9 +43,9 @@ This repository contains the code used for our paper: Reinforcement Learning for
                    lamorel_args.llm_args.model_type="seq2seq"
                    rl_script_args.twc_levels= ./TWC-Medium #Directory of twc levels downloaded or created
 ### Train single strategy $P_{all}$:
-        python3 -m lamorel_launcher.launch --config-path "./experiments/TWC/configs/custom/" #if absolute path doesnt work use relative path
-                   --config-name "local_gpu_config"        
-                   rl_script_args.path="/experiments/TWC/main_pAll.py" #if absolute path doesnt work use relative path
+        python3 -m lamorel_launcher.launch --config-path PROJECT_PATH/experiments/TWC/configs/custom/ 
+                   --config-name local_gpu_config        
+                   rl_script_args.path=PROJECT_PATH/experiments/TWC/main_pAll.py
                    rl_script_args.output_dir="." 
                    lamorel_args.accelerate_args.machine_rank=0 
                    rl_script_args.gradient_batch_size=4 
@@ -55,9 +55,9 @@ This repository contains the code used for our paper: Reinforcement Learning for
                    lamorel_args.llm_args.model_type="seq2seq"
                    rl_script_args.twc_levels= ./TWC-Medium #Directory of twc levels downloaded or created
 ### Train single strategy $Contrastive_{P_i}$:
-        python3 -m lamorel_launcher.launch --config-path "./experiments/TWC/configs/custom/" #if absolute path doesnt work use relative path
+        python3 -m lamorel_launcher.launch --config-path PROJECT_PATH/experiments/TWC/configs/custom/
                    --config-name "local_gpu_config"        
-                   rl_script_args.path="/experiments/TWC/main_Contrastive.py" #if absolute path doesnt work use relative path
+                   rl_script_args.path=PROJECT_PATH/eriments/TWC/main_Contrastive.py
                    rl_script_args.output_dir="." 
                    lamorel_args.accelerate_args.machine_rank=0 
                    rl_script_args.gradient_batch_size=4 
@@ -68,9 +68,9 @@ This repository contains the code used for our paper: Reinforcement Learning for
                    rl_script_args.twc_levels= ./TWC-Medium #Directory of twc levels downloaded or created
 ## BabyAI-Text:
 ### Train single strategy $P_i$:
-        python3 -m lamorel_launcher.launch --config-path "./experiments/BabyAI-Text/configs/custom/"  #if absolute path doesnt work use relative path
+        python3 -m lamorel_launcher.launch --config-path PROJECT_PATH/experiments/BabyAI-Text/configs/custom/ 
                    --config-name "local_gpu_config"        
-                   rl_script_args.path="/experiments/BabyAI-Text/main_pi.py" #if absolute path doesnt work use relative path
+                   rl_script_args.path=PROJECT_PATH/eriments/BabyAI-Text/main_pi.py
                    rl_script_args.output_dir="." 
                    lamorel_args.accelerate_args.machine_rank=0 
                    rl_script_args.gradient_batch_size=4 
@@ -79,9 +79,9 @@ This repository contains the code used for our paper: Reinforcement Learning for
                    rl_script_args.seed= 1   
                    lamorel_args.llm_args.model_type="seq2seq"
 ### Train single strategy $P_{all}$:
-        python3 -m lamorel_launcher.launch --config-path "./experiments/BabyAI-Text/configs/custom/" #if absolute path doesnt work use relative path
+        python3 -m lamorel_launcher.launch --config-path PROJECT_PATH/experiments/BabyAI-Text/configs/custom/
                    --config-name "local_gpu_config"        
-                   rl_script_args.path="/experiments/BabyAI-Text/main_pAll.py" #if absolute path doesnt work use relative path
+                   rl_script_args.path=PROJECT_PATH/eriments/BabyAI-Text/main_pAll.py
                    rl_script_args.output_dir="." 
                    lamorel_args.accelerate_args.machine_rank=0 
                    rl_script_args.gradient_batch_size=4 
@@ -90,9 +90,9 @@ This repository contains the code used for our paper: Reinforcement Learning for
                    rl_script_args.seed= 1   
                    lamorel_args.llm_args.model_type="seq2seq"
 ### Train single strategy $Contrastive_{P_i}$:
-        python3 -m lamorel_launcher.launch --config-path "./experiments/BabyAI-Text/configs/custom/" #if absolute path doesnt work use relative path
+        python3 -m lamorel_launcher.launch --config-path PROJECT_PATH/experiments/BabyAI-Text/configs/custom/
                    --config-name "local_gpu_config"        
-                   rl_script_args.path="/experiments/BabyAI-Text/main_Contrastive.py" #if absolute path doesnt work use relative path
+                   rl_script_args.path=PROJECT_PATH/eriments/BabyAI-Text/main_Contrastive.py
                    rl_script_args.output_dir="." 
                    lamorel_args.accelerate_args.machine_rank=0 
                    rl_script_args.gradient_batch_size=4 
@@ -102,9 +102,9 @@ This repository contains the code used for our paper: Reinforcement Learning for
                    lamorel_args.llm_args.model_type="seq2seq"
 # Evaluation
 ## TWC:
-        python3 -m lamorel_launcher.launch --config-path "./experiments/TWC/configs/custom/" #if absolute path doesnt work use relative path
+        python3 -m lamorel_launcher.launch --config-path PROJECT_PATH/experiments/TWC/configs/custom/
                    --config-name "local_gpu_config"        
-                   rl_script_args.path="/experiments/TWC/Evaluation.py" #if absolute path doesnt work use relative path
+                   rl_script_args.path=PROJECT_PATH/eriments/TWC/Evaluation.py
                    rl_script_args.output_dir="." 
                    lamorel_args.accelerate_args.machine_rank=0 
                    rl_script_args.gradient_batch_size=4 
@@ -112,13 +112,13 @@ This repository contains the code used for our paper: Reinforcement Learning for
                    rl_script_args.prompt_id=0 # P_i number from 0 to 3 , Contrastive applied to all others
                    rl_script_args.seed= 1   
                    lamorel_args.llm_args.model_type="seq2seq"
-                   rl_script_args.loading_path="./path" #path of directory of weights , for zs just skip the parameter
+                   rl_script_args.loading_path=PROJECT_PATH/path" #path of directory of weights , for zs just skip the parameter
                    rl_script_args.twc_levels= ./TWC-Medium 
                    rl_script_args.json="Results TWC.csv" 
 ## BabyAI-Text:
-        python3 -m lamorel_launcher.launch --config-path "./experiments/BabyAI-Text/configs/custom/"  #if absolute path doesnt work use relative path
+        python3 -m lamorel_launcher.launch --config-path PROJECT_PATH/experiments/BabyAI-Text/configs/custom/ 
                    --config-name "local_gpu_config"        
-                   rl_script_args.path="/experiments/BabyAI-Text/Evaluation.py" #if absolute path doesnt work use relative path
+                   rl_script_args.path=PROJECT_PATH/eriments/BabyAI-Text/Evaluation.py
                    rl_script_args.output_dir="." 
                    rl_script_args.number_envs=1 
                    lamorel_args.accelerate_args.machine_rank=0 
@@ -127,7 +127,7 @@ This repository contains the code used for our paper: Reinforcement Learning for
                    rl_script_args.prompt_id=0 # P_i number from 0 to 3 , Contrastive applied to all others
                    rl_script_args.seed= 1   
                    lamorel_args.llm_args.model_type="seq2seq"
-                   rl_script_args.loading_path="./path" #path of directory of weights , for zs just skip the parameter
+                   rl_script_args.loading_path=PROJECT_PATH/path" #path of directory of weights , for zs just skip the parameter
                    rl_script_args.json="Results BabyAI-text.csv" 
                     
 
