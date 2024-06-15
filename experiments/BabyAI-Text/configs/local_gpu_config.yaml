@@ -51,8 +51,8 @@ rl_script_args:
   # rl training
   number_envs: 4
   max_ep_len: 200
-  epochs: 600
-  steps_per_epoch: 500
+  epochs: 500
+  steps_per_epoch: 1000
   prompt_id: 0
   save_freq: 25
   output_dir: ???
