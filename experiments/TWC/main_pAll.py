@@ -6,7 +6,7 @@ from typing import List
 from torch.nn.functional import log_softmax
 import hydra
 from utils.ppo_buffer import PPOBuffer
-from utils.generate_prompt import  *
+from utils.generate_prompt import *
 from utils.scoring_utils import scores_stacking
 import torch
 import bitsandbytes
@@ -34,43 +34,54 @@ from lamorel import Caller, lamorel_init
 from lamorel import BaseUpdater, BaseModuleFunction, BaseModelInitializer
 from random import sample
 
-prompt_generator=[Glam_prompt,swap_prompt,xml_prompt,paraphrase_prompt]
-
+prompt_generator = [Glam_prompt, swap_prompt, xml_prompt, paraphrase_prompt]
 lamorel_init()
 import os
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-useless=["Wow, isn't TextWorld just the best?","I mean, just wow! Isn't TextWorld just the best?","What kind of nightmare TextWorld is this?","This is the worst thing that could possibly happen, ever!","Oh! Why couldn't there just be stuff on it?","Aw, here you were, all excited for there to be things on it!","Now that's what I call TextWorld!","what a horrible day!","What a waste of a day!"]
+useless = ["Wow, isn't TextWorld just the best?", "I mean, just wow! Isn't TextWorld just the best?",
+           "What kind of nightmare TextWorld is this?", "This is the worst thing that could possibly happen, ever!",
+           "Oh! Why couldn't there just be stuff on it?",
+           "Aw, here you were, all excited for there to be things on it!", "Now that's what I call TextWorld!",
+           "what a horrible day!", "What a waste of a day!"]
 
-def get_infos(infos,nb=1,clean=True):
-    #prompt=""
-    information=[]
-    obs=[]
+
+
+
+
+def get_infos(infos, nb=1, clean=True):
+    # prompt=""
+    information = []
+    obs = []
     for _i in range(nb):
-        dico={}
-        if True :
-            for commands_ in infos["admissible_commands"]: # [open refri, take apple from refrigeration]
+        dico = {}
+        if True:
+            for commands_ in infos["admissible_commands"]:  # [open refri, take apple from refrigeration]
                 for cmd_ in [cmd for cmd in commands_ if cmd.split()[0] in ["examine", "look"]]:
                     commands_.remove(cmd_)
 
         if clean:
             for i in useless:
                 for j in range(len(infos["description"])):
-                    infos["description"][j]=infos["description"][j].replace(i,"")
-        data=re.sub("\n+","\n",infos["description"][_i]).split("\n")
+                    infos["description"][j] = infos["description"][j].replace(i, "")
+        data = re.sub("\n+", "\n", infos["description"][_i]).split("\n")
 
-        dico["goal"]='clean the {}'.format(re.search("-= (.*) =-",data[0]).group(1))
-        dico["obs"]=data[2:]
-        dico["possible_actions"]=infos["admissible_commands"][_i]
-        dico["inventory"]=infos["inventory"][_i]
-        dico["last_action"]=infos["last_action"][_i]
-        dico["won"]=infos["won"][_i]
+        dico["goal"] = 'clean the {}'.format(re.search("-= (.*) =-", data[0]).group(1))
+        dico["obs"] = data[2:]
+        dico["possible_actions"] = infos["admissible_commands"][_i]
+        dico["inventory"] = infos["inventory"][_i]
+        dico["last_action"] = infos["last_action"][_i]
+        dico["won"] = infos["won"][_i]
         obs.append(dico["obs"])
         information.append(dico)
-    return obs,information
+    return obs, information
+
+
 from accelerate import Accelerator
+
 accelerator = Accelerator()
+
 
 class LogScoringModuleFn(BaseModuleFunction):
     def __init__(self, model_type, pre_encoded_input):
@@ -78,7 +89,8 @@ class LogScoringModuleFn(BaseModuleFunction):
         self._model_type = model_type
         self._pad_token = 0
         self._pre_encoded_input = pre_encoded_input
-        self.normalization="token"
+        self.normalization = "token"
+
     def initialize(self):
         pass
 
@@ -88,21 +100,22 @@ class LogScoringModuleFn(BaseModuleFunction):
                 end_of_context_position = 0
             else:  # hence input should be removed from result
                 end_of_context_position = len(
-                    tokenized_contexts[0]["input_ids"]) # inputs are padded so all of same size
+                    tokenized_contexts[0]["input_ids"])  # inputs are padded so all of same size
 
             logits = forward_outputs["logits"][:, end_of_context_position:-1, :]
-            output_tokens = minibatch["input_ids"][:, end_of_context_position+1:]
+            output_tokens = minibatch["input_ids"][:, end_of_context_position + 1:]
         else:
             logits = forward_outputs["logits"][:, :-1, :]  # skip </s> token appended by tokenizer
             output_tokens = minibatch["decoder_input_ids"][:, 1:]  # skip pad token
         logits = log_softmax(logits, dim=-1)
         tokens_logprobs = \
-            torch.gather(logits, 2, output_tokens[:, :, None]).squeeze(-1).to(torch.float32)  # filter with sequence tokens
-        if self.normalization=="token":
-            action_length=(output_tokens!=0).sum(-1)
-            #print(output_tokens)
+            torch.gather(logits, 2, output_tokens[:, :, None]).squeeze(-1).to(
+                torch.float32)  # filter with sequence tokens
+        if self.normalization == "token":
+            action_length = (output_tokens != 0).sum(-1)
+            # print(output_tokens)
         else:
-            action_length=1
+            action_length = 1
         # Compute mask to assign probability 1 to padding tokens
         mask = torch.ones(tokens_logprobs.shape, dtype=torch.bool, device=self.device)
         for i, _output in enumerate(output_tokens):
@@ -112,8 +125,9 @@ class LogScoringModuleFn(BaseModuleFunction):
         masked_token_probs = tokens_logprobs.masked_fill(mask, 0.0)  # apply mask
         minibatch_probs = masked_token_probs.sum(-1)  # compute final sequences' probability
 
-        minibatch_probs = minibatch_probs/action_length
+        minibatch_probs = minibatch_probs / action_length
         return minibatch_probs.cpu()
+
 
 class ValueHeadModuleFn(BaseModuleFunction):
     def __init__(self, model_type, pre_encoded_input):
@@ -158,8 +172,9 @@ class ValueHeadModuleFn(BaseModuleFunction):
         value = self.value_head_op(model_head.to(torch.float32).to(self.device))
         return value.cpu()
 
+
 class SequentialInitializer(BaseModelInitializer):
-    def __init__(self, initializers:List[BaseModelInitializer]):
+    def __init__(self, initializers: List[BaseModelInitializer]):
         super().__init__()
         self._initializers = initializers
 
@@ -168,6 +183,7 @@ class SequentialInitializer(BaseModelInitializer):
             model = _initializer.initialize_model(model)
 
         return model
+
 
 class WeightsLoaderInitializer(BaseModelInitializer):
     def __init__(self, weights_path):
@@ -181,6 +197,7 @@ class WeightsLoaderInitializer(BaseModelInitializer):
             model.load_state_dict(state_dict=hf_llm_module_dict, strict=False)
 
         return model
+
 
 class PeftInitializer(BaseModelInitializer):
     def __init__(self, model_type, model_name, use_lora, use_4bit, r, alpha, target_modules=None, use_cache=True):
@@ -213,16 +230,7 @@ class PeftInitializer(BaseModelInitializer):
             return LoraConfig(
                 r=self._r,
                 lora_alpha=self._alpha,
-                target_modules= ["q", "v"],
-                lora_dropout=0.0,
-                bias="none",
-                task_type="SEQ_2_SEQ_LM"
-            )
-        elif "bart" in self._model_name:
-            return LoraConfig(
-                r=self._r,
-                lora_alpha=self._alpha,
-                target_modules= ["q_proj", "v_proj"],
+                target_modules=["q", "v"],
                 lora_dropout=0.0,
                 bias="none",
                 task_type="SEQ_2_SEQ_LM"
@@ -250,20 +258,11 @@ class PeftInitializer(BaseModelInitializer):
                 bias="none",
                 task_type="CAUSAL_LM"
             )
-        elif "gpt"  in self._model_name:
+        elif "gpt" in self._model_name:
             return LoraConfig(
                 r=self._r,
                 lora_alpha=self._alpha,
-                target_modules= ["q_proj", "v_proj"],
-                lora_dropout=0.0,
-                bias="none",
-                task_type="CAUSAL_LM"
-            )
-        elif "pythia"  in self._model_name:
-            return LoraConfig(
-                r=self._r,
-                lora_alpha=self._alpha,
-                target_modules= ["query_key_value"],
+                target_modules=["q_proj", "v_proj"],
                 lora_dropout=0.0,
                 bias="none",
                 task_type="CAUSAL_LM"
@@ -301,8 +300,10 @@ class PeftInitializer(BaseModelInitializer):
         self._print_trainable_parameters(model)
         return model
 
+
 class PPOUpdater(BaseUpdater):
-    def __init__(self, model_type, minibatch_size, gradient_batch_size, quantized_optimizer, gradient_minibatch_size=None):
+    def __init__(self, model_type, minibatch_size, gradient_batch_size, quantized_optimizer,
+                 gradient_minibatch_size=None):
         super(PPOUpdater, self).__init__()
         self._model_type = model_type
         self._minibatch_size = minibatch_size
@@ -352,7 +353,7 @@ class PPOUpdater(BaseUpdater):
 
                 self.optimizer.zero_grad()
                 gradient_accumulation_steps = math.ceil(
-                    (_minibatch_end_idx - _minibatch_start_idx )/ self._gradient_batch_size)
+                    (_minibatch_end_idx - _minibatch_start_idx) / self._gradient_batch_size)
                 for accumulated_batch in tqdm(range(gradient_accumulation_steps)):
                     _start_idx = _minibatch_start_idx + accumulated_batch * self._gradient_batch_size
                     _stop_idx = _minibatch_start_idx + min(
@@ -369,20 +370,23 @@ class PPOUpdater(BaseUpdater):
                     output = self._llm_module(['score', 'value'], contexts=_contexts, candidates=_candidates,
                                               require_grad=True, minibatch_size=_batch_size)
                     scores = scores_stacking([_o['score'] for _o in output])
-                    #print(scores,"\n\n\n\n\n")
+                    # print(scores,"\n\n\n\n\n")
                     probas = torch.distributions.Categorical(logits=scores)
                     values = scores_stacking([_o["value"][0] for _o in output])
 
                     # Compute policy loss
                     entropy = probas.entropy().mean()
-                    log_prob = probas.log_prob(current_process_buffer['actions'][_start_idx:_stop_idx]) # Use logprobs from dist as they were normalized
+                    log_prob = probas.log_prob(current_process_buffer['actions'][
+                                               _start_idx:_stop_idx])  # Use logprobs from dist as they were normalized
                     ratio = torch.exp(log_prob - current_process_buffer['logprobs'][_start_idx:_stop_idx])
                     # assert not (i == 0 and step == 0 and (torch.any(ratio < 0.99) or torch.any(ratio > 1.1)))
                     if i == 0 and step == 0 and (torch.any(ratio < 0.99) or torch.any(ratio > 1.1)):
                         logging.warning("PPO ratio != 1 !!")
 
-                    clip_adv = torch.clamp(ratio, 1 - kwargs["clip_eps"], 1 + kwargs["clip_eps"]) * current_process_buffer['advantages'][_start_idx:_stop_idx]
-                    policy_loss = -(torch.min(ratio * current_process_buffer['advantages'][_start_idx:_stop_idx], clip_adv)).mean()
+                    clip_adv = torch.clamp(ratio, 1 - kwargs["clip_eps"], 1 + kwargs["clip_eps"]) * \
+                               current_process_buffer['advantages'][_start_idx:_stop_idx]
+                    policy_loss = -(
+                        torch.min(ratio * current_process_buffer['advantages'][_start_idx:_stop_idx], clip_adv)).mean()
                     epochs_losses["policy"].append(policy_loss.detach().cpu().item())
 
                     # Compute value loss
@@ -390,7 +394,8 @@ class PPOUpdater(BaseUpdater):
                     clipped_values = current_process_buffer['values'][_start_idx:_stop_idx] + \
                                      torch.clamp(values - current_process_buffer['values'][_start_idx:_stop_idx],
                                                  -kwargs["clip_eps"], kwargs["clip_eps"])
-                    clipped_value_error = ((clipped_values - current_process_buffer['returns'][_start_idx:_stop_idx]) ** 2)
+                    clipped_value_error = (
+                                (clipped_values - current_process_buffer['returns'][_start_idx:_stop_idx]) ** 2)
                     value_loss = torch.max(unclipped_value_error, clipped_value_error).mean()
                     epochs_losses["value"].append(value_loss.detach().cpu().item())
 
@@ -409,8 +414,8 @@ class PPOUpdater(BaseUpdater):
         if kwargs["save_after_update"] and accelerator.process_index == 1:
             print("Saving model...")
             model_state_dict = OrderedDict({
-                    k: v for k, v in self._iterator_named_trainable_params()
-                })
+                k: v for k, v in self._iterator_named_trainable_params()
+            })
             torch.save(model_state_dict, kwargs["output_dir"] + "/model.checkpoint")
             torch.save(self.optimizer.state_dict(), kwargs["output_dir"] + "/optimizer.checkpoint")
             print("Model saved")
@@ -431,6 +436,8 @@ def reset_history():
         "actions": [],
         "prompts": [],
     }
+
+
 @hydra.main(config_path='config', config_name='config')
 def main(config_args):
     # Random seed
@@ -440,15 +447,13 @@ def main(config_args):
     set_seed(seed)
 
     # Instantiate environment
-    requested_infos=EnvInfos(description=True, inventory=True, admissible_commands=True,won=True,lost=True,location = True,last_action=True,game=True,facts=True,entities=True)
-    game_file_names=glob.glob(config_args.rl_script_args.twc_levels+"/*.ulx")
-
-
-    train_env_id = textworld.gym.register_games(sorted(game_file_names[0:]), requested_infos, max_episode_steps=20,name='cleanup-'+"mode",batch_size=config_args.rl_script_args.number_envs)
+    requested_infos = EnvInfos(description=True, inventory=True, admissible_commands=True, won=True, lost=True,
+                               location=True, last_action=True, game=True, facts=True, entities=True)
+    game_file_names = glob.glob(config_args.rl_script_args.twc_levels + "/*.ulx")
+    env_id = textworld.gym.register_games(sorted(game_file_names[0:]), requested_infos, max_episode_steps=20,
+                                          name='cleanup-' + "mode", batch_size=config_args.rl_script_args.number_envs)
     # env_id = make_batch(env_id, batch_size=batch_size, parallel=True)
-    train_env = textworld.gym.make(train_env_id)
-    # env_id = make_batch(env_id, batch_size=batch_size, parallel=True)
-
+    env = textworld.gym.make(env_id)
 
     # Create LLM agent
     lm_server = Caller(config_args.lamorel_args,
@@ -463,16 +468,16 @@ def main(config_args):
                                            config_args.lamorel_args.llm_args.load_in_4bit,
                                            config_args.rl_script_args.lora_r,
                                            config_args.rl_script_args.lora_alpha,
-                                           #list(config_args.rl_script_args.lora_target_modules),
+                                           # list(config_args.rl_script_args.lora_target_modules),
                                            config_args.lamorel_args.llm_args.pre_encode_inputs),
                            WeightsLoaderInitializer(config_args.rl_script_args.loading_path)
                        ]),
                        custom_module_functions={
-                            'score': LogScoringModuleFn(config_args.lamorel_args.llm_args.model_type,
-                                                        config_args.lamorel_args.llm_args.pre_encode_inputs),
-                            'value': ValueHeadModuleFn(config_args.lamorel_args.llm_args.model_type,
-                                                       config_args.lamorel_args.llm_args.pre_encode_inputs)
-                        })
+                           'score': LogScoringModuleFn(config_args.lamorel_args.llm_args.model_type,
+                                                       config_args.lamorel_args.llm_args.pre_encode_inputs),
+                           'value': ValueHeadModuleFn(config_args.lamorel_args.llm_args.model_type,
+                                                      config_args.lamorel_args.llm_args.pre_encode_inputs)
+                       })
 
     # Set up experience buffer
     buffers = [
@@ -482,27 +487,26 @@ def main(config_args):
     ]
 
     # Prepare for interaction with environment
-    (o, infos), ep_ret, ep_len = train_env.reset(), \
+    (o, infos), ep_ret, ep_len = env.reset(), \
         [0 for _ in range(config_args.rl_script_args.number_envs)], \
         [0 for _ in range(config_args.rl_script_args.number_envs)]
-    clean=True
-    if config_args.rl_script_args.prompt_id==4:
-            clean=False
-            config_args.rl_script_args.prompt_id=0
-    generate_prompt=prompt_generator[config_args.rl_script_args.prompt_id]
-    o,infos=get_infos(infos,config_args.rl_script_args.number_envs,clean)
+    clean = True
+    if config_args.rl_script_args.prompt_id == 4:
+        clean = False
+        config_args.rl_script_args.prompt_id = 0
+    generate_prompt = prompt_generator[config_args.rl_script_args.prompt_id]
+    o, infos = get_infos(infos, config_args.rl_script_args.number_envs, clean)
     history = reset_history()
     history["goal"].extend([_i["goal"] for _i in infos])
 
     transitions_buffer = [[] for _ in range(config_args.rl_script_args.number_envs)]
-    proj=config_args.lamorel_args.llm_args.model_path.split("/")[-1]+"_prompt"+str(config_args.rl_script_args.prompt_id)
     for epoch in tqdm(range(config_args.rl_script_args.epochs)):
         __time = time.time()
         for t in tqdm(range(config_args.rl_script_args.steps_per_epoch // config_args.rl_script_args.number_envs),
                       ascii=" " * 9 + ">", ncols=100):
-            #generate_prompt=sample(prompt_generator,1)[0]
+            generate_prompt = sample(prompt_generator, 1)[0]
             possible_actions = [_i["possible_actions"] for _i in infos]
-            prompts = [generate_prompt( _i) for _i in infos]
+            prompts = [generate_prompt(_i) for _i in infos]
 
             output = lm_server.custom_module_fns(['score', 'value'],
                                                  contexts=prompts,
@@ -520,18 +524,17 @@ def main(config_args):
                 actions_command.append(command)
                 transitions_buffer[j].append({"obs": o[j], "act": command})
                 transitions_buffer[j] = transitions_buffer[j][-config_args.rl_script_args.transitions_buffer_len:]
-            o, r, d, infos = train_env.step(actions_command)
-            s=infos["won"]*1
-            o,infos=get_infos(infos,config_args.rl_script_args.number_envs,clean)
-            epoch_ended = (t+1)*config_args.rl_script_args.number_envs == config_args.rl_script_args.steps_per_epoch
+            o, r, d, infos = env.step(actions_command)
+            s = infos["won"] * 1
+            o, infos = get_infos(infos, config_args.rl_script_args.number_envs, clean)
+            epoch_ended = (t + 1) * config_args.rl_script_args.number_envs == config_args.rl_script_args.steps_per_epoch
             bootstrap_dict = {
                 "ids": [],
                 "contexts": []
             }
             for i in range(config_args.rl_script_args.number_envs):
-                buffers[i].store(prompts[i], possible_actions[i], actions_id[i], r[i]*s[i], values[i], log_probs[i])
-                ep_ret[i] += r[i]*s[i]
-
+                buffers[i].store(prompts[i], possible_actions[i], actions_id[i], r[i] * s[i], values[i], log_probs[i])
+                ep_ret[i] += r[i] * s[i]
                 ep_len[i] += 1
                 timeout = ep_len[i] == config_args.rl_script_args.max_ep_len
                 terminal = d[i] or timeout
@@ -546,10 +549,12 @@ def main(config_args):
                         ep_len[i], ep_ret[i] = 0, 0
                         transitions_buffer[i] = []
                         history["goal"].append(infos[i]["goal"])
-            #print(prompts)
+            # print(prompts)
             if torch.all(torch.tensor(d)):
-                o,infos=train_env.reset()
-                o,infos=get_infos(infos,config_args.rl_script_args.number_envs,clean)
+                print(d)
+                print(r)
+                o, infos = env.reset()
+                o, infos = get_infos(infos, config_args.rl_script_args.number_envs, clean)
 
             #    o,infos=get_infos(infos,config_args.rl_script_args.number_envs)
             if len(bootstrap_dict["ids"]) > 0:
@@ -617,15 +622,9 @@ def main(config_args):
 
         if save_model_and_history:
             # Save history
-            avg_window=500
             with open(f"{saving_path}/history.pkl", "wb") as file:
                 pickle.dump(history, file)
-            success_rate = [1 if _ret > 1 else 0 for _ret in history["ep_ret"]]
-            averaged_success_rate = [np.mean(success_rate[i-avg_window:i]) for i in range(len(success_rate))]
-            run.log({"success rate": averaged_success_rate})
             history = reset_history()
-
-
 
     start_epoch = epoch - config_args.rl_script_args.save_freq
     saving_path = f"{config_args.rl_script_args.output_dir}/epochs_{start_epoch}-{epoch}"
@@ -635,6 +634,7 @@ def main(config_args):
 
         lm_server.close()
         exit()
+
 
 if __name__ == '__main__':
     main()

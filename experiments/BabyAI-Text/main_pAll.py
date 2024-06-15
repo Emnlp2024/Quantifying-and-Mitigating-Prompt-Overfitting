@@ -3,10 +3,10 @@ PPO implementation taken from https://github.com/openai/spinningup
 '''
 from collections import OrderedDict
 from typing import List
-
+from torch.nn.functional import log_softmax
 import hydra
 from utils.ppo_buffer import PPOBuffer
-from utils.generate_prompt import generate_prompt
+from utils.generate_prompt import *
 from utils.scoring_utils import scores_stacking
 import torch
 import bitsandbytes
@@ -29,9 +29,9 @@ from environments import EnvEnum
 
 from lamorel import Caller, lamorel_init
 from lamorel import BaseUpdater, BaseModuleFunction, BaseModelInitializer
-
+from random import sample
 lamorel_init()
-
+prompt_generator=[Glam_prompt,swap_prompt,xml_prompt,paraphrase_prompt]
 from accelerate import Accelerator
 accelerator = Accelerator()
 
@@ -58,7 +58,7 @@ class LogScoringModuleFn(BaseModuleFunction):
         else:
             logits = forward_outputs["logits"][:, :-1, :]  # skip </s> token appended by tokenizer
             output_tokens = minibatch["decoder_input_ids"][:, 1:]  # skip pad token
-
+        logits = log_softmax(logits, dim=-1)
         tokens_logprobs = \
             torch.gather(logits, 2, output_tokens[:, :, None]).squeeze(-1).to(torch.float32)  # filter with sequence tokens
 
@@ -171,7 +171,7 @@ class PeftInitializer(BaseModelInitializer):
             return LoraConfig(
                 r=self._r,
                 lora_alpha=self._alpha,
-                target_modules=self._target_modules or ["q", "v"],
+                target_modules= ["q", "v"],
                 lora_dropout=0.0,
                 bias="none",
                 task_type="SEQ_2_SEQ_LM"
@@ -190,11 +190,38 @@ class PeftInitializer(BaseModelInitializer):
                 bias="none",
                 task_type="CAUSAL_LM"
             )
+        elif "bart" in self._model_name:
+            return LoraConfig(
+                r=self._r,
+                lora_alpha=self._alpha,
+                target_modules= ["q_proj", "v_proj"],
+                lora_dropout=0.0,
+                bias="none",
+                task_type="SEQ_2_SEQ_LM"
+            )
         elif "opt" in self._model_name or "Llama" in self._model_name or "Mistral" in self._model_name:
             return LoraConfig(
                 r=self._r,
                 lora_alpha=self._alpha,
                 target_modules=self._target_modules or ["q_proj", "v_proj"],
+                lora_dropout=0.0,
+                bias="none",
+                task_type="CAUSAL_LM"
+            )
+        elif "gpt" in self._model_name:
+            return LoraConfig(
+                r=self._r,
+                lora_alpha=self._alpha,
+                target_modules= ["q_proj", "v_proj"],
+                lora_dropout=0.0,
+                bias="none",
+                task_type="CAUSAL_LM"
+            )
+        elif "pythia"  in self._model_name:
+            return LoraConfig(
+                r=self._r,
+                lora_alpha=self._alpha,
+                target_modules= ["query_key_value"],
                 lora_dropout=0.0,
                 bias="none",
                 task_type="CAUSAL_LM"
@@ -283,7 +310,7 @@ class PPOUpdater(BaseUpdater):
 
                 self.optimizer.zero_grad()
                 gradient_accumulation_steps = math.ceil(
-                    _minibatch_end_idx - _minibatch_start_idx / self._gradient_batch_size)
+                    (_minibatch_end_idx - _minibatch_start_idx )/ self._gradient_batch_size)
                 for accumulated_batch in range(gradient_accumulation_steps):
                     _start_idx = _minibatch_start_idx + accumulated_batch * self._gradient_batch_size
                     _stop_idx = _minibatch_start_idx + min(
@@ -302,7 +329,7 @@ class PPOUpdater(BaseUpdater):
                     scores = torch.stack([_o['score'] for _o in output]).squeeze()
                     probas = torch.distributions.Categorical(logits=scores)
                     values = torch.stack([_o["value"][0] for _o in output]).squeeze()
-
+                    print(probas)
                     # Compute policy loss
                     entropy = probas.entropy().mean()
                     log_prob = probas.log_prob(current_process_buffer['actions'][_start_idx:_stop_idx]) # Use logprobs from dist as they were normalized
@@ -385,7 +412,7 @@ def main(config_args):
                                            config_args.lamorel_args.llm_args.load_in_4bit,
                                            config_args.rl_script_args.lora_r,
                                            config_args.rl_script_args.lora_alpha,
-                                           list(config_args.rl_script_args.lora_target_modules),
+                                           #list(config_args.rl_script_args.lora_target_modules),
                                            config_args.lamorel_args.llm_args.pre_encode_inputs),
                            WeightsLoaderInitializer(config_args.rl_script_args.loading_path)
                        ]),
@@ -410,14 +437,16 @@ def main(config_args):
 
     history = reset_history()
     history["goal"].extend([_i["goal"] for _i in infos])
+    template=prompt_generator[config_args.rl_script_args.prompt_id]
 
     transitions_buffer = [[] for _ in range(config_args.rl_script_args.number_envs)]
-    for epoch in range(config_args.rl_script_args.epochs):
+    for epoch in tqdm(range(config_args.rl_script_args.epochs)):
         __time = time.time()
         for t in tqdm(range(config_args.rl_script_args.steps_per_epoch // config_args.rl_script_args.number_envs),
                       ascii=" " * 9 + ">", ncols=100):
             possible_actions = [_i["possible_actions"] for _i in infos]
-            prompts = [generate_prompt(_buff, _o, _i) for _buff, _o, _i in zip(transitions_buffer, o, infos)]
+            template=sample(prompt_generator,1)[0]
+            prompts = [template(_buff, _o, _i) for _buff, _o, _i in zip(transitions_buffer, o, infos)]
             output = lm_server.custom_module_fns(['score', 'value'],
                                                  contexts=prompts,
                                                  candidates=possible_actions)
@@ -449,7 +478,7 @@ def main(config_args):
                 if terminal or epoch_ended:
                     if not terminal:
                         bootstrap_dict["ids"].append(i)
-                        bootstrap_dict["contexts"].append(generate_prompt(transitions_buffer[i], o[i], infos[i]))
+                        bootstrap_dict["contexts"].append(template(transitions_buffer[i], o[i], infos[i]))
                     else:
                         buffers[i].finish_path(0)
                         history["ep_len"].append(ep_len[i])
