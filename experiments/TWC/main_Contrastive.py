@@ -602,7 +602,7 @@ def main(config_args):
                                           name='cleanup-' + "mode", batch_size=config_args.rl_script_args.number_envs)
     # env_id = make_batch(env_id, batch_size=batch_size, parallel=True)
     env = textworld.gym.make(env_id)
-    alpha = 0.2
+    alpha = 0.5
 
     # Create LLM agent
     lm_server = Caller(config_args.lamorel_args,
@@ -759,8 +759,7 @@ def main(config_args):
         }
         # print(len(collected_trajectories['obs']))
         # print(len(prompt_buffer))
-        if (epoch + 1) % 100 == 0:
-            alpha = 0.2
+        
         update_results = lm_server.update(collected_trajectories['obs'],
                                           collected_trajectories['possible_act'],
                                           actions=collected_trajectories['act'],

@@ -410,7 +410,7 @@ class PPOUpdater(BaseUpdater):
                                 (clipped_values - current_process_buffer['returns'][_start_idx:_stop_idx]) ** 2)
                     value_loss = torch.max(unclipped_value_error, clipped_value_error).mean()
                     epochs_losses["value"].append(value_loss.detach().cpu().item())
-                    alpha = 1
+                    alpha = 0.5
                     # Compute final loss
                     loss = policy_loss - kwargs["entropy_coef"] * entropy + kwargs[
                         "value_loss_coef"] * value_loss + Contrastive * alpha
