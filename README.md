@@ -67,7 +67,7 @@ This repository contains the code used for our paper: Reinforcement Learning for
                    lamorel_args.llm_args.model_type="seq2seq"
                    rl_script_args.twc_levels= ./TWC-Medium #Directory of twc levels downloaded or created
 ## BabyAI-Text:
-### Train single strategy $P_i$:
+### Train single strategy $\pi_{p=0}$:
         python3 -m lamorel_launcher.launch --config-path PROJECT_PATH/experiments/BabyAI-Text/configs/ 
                    --config-name "local_gpu_config"        
                    rl_script_args.path=PROJECT_PATH/experiments/BabyAI-Text/main_pi.py
@@ -78,7 +78,7 @@ This repository contains the code used for our paper: Reinforcement Learning for
                    rl_script_args.prompt_id=0 # P_i number from 0 to 3 
                    rl_script_args.seed= 1   
                    lamorel_args.llm_args.model_type="seq2seq"
-### Train single strategy $P_{all}$:
+### Train single strategy $\pi_{p=0:3}$:
         python3 -m lamorel_launcher.launch --config-path PROJECT_PATH/experiments/BabyAI-Text/configs/
                    --config-name "local_gpu_config"        
                    rl_script_args.path=PROJECT_PATH/experiments/BabyAI-Text/main_pAll.py
@@ -89,7 +89,7 @@ This repository contains the code used for our paper: Reinforcement Learning for
                    rl_script_args.prompt_id=0 # useless we train on all prompts 
                    rl_script_args.seed= 1   
                    lamorel_args.llm_args.model_type="seq2seq"
-### Train single strategy $Contrastive_{P_i}$:
+### Train single strategy $\pi^{c={0:3}\ }_{p=0}$:
         python3 -m lamorel_launcher.launch --config-path PROJECT_PATH/experiments/BabyAI-Text/configs/
                    --config-name "local_gpu_config"        
                    rl_script_args.path=PROJECT_PATH/experiments/BabyAI-Text/main_Contrastive.py
