@@ -4,7 +4,7 @@ This repository contains the code used for our paper: Reinforcement Learning for
 # Installation steps
 1. Create Python Environment
  
-       conda create -n EMNLP python=3.10.8; conda activate EMNLP
+       conda create -n PRV python=3.10.8; conda activate PRV
 2. Install packages required
 
        pip install -r requirements.txt
