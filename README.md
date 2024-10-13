@@ -30,7 +30,7 @@ This repository contains the code used for our paper: Reinforcement Learning for
        git clone https://github.com/flowersteam/lamorel.git; cd lamorel/lamorel; pip install -e .; cd ../..
 # Training a Language Model
 ## TWC:
-### Train single strategy $P_i$:
+### Train single strategy $\pi_{p=0}$:
         python3 -m lamorel_launcher.launch --config-path PROJECT_PATH/experiments/TWC/configs 
                    --config-name "local_gpu_config"        
                    rl_script_args.path=PROJECT_PATH/experiments/TWC/main_pi.py
@@ -42,7 +42,7 @@ This repository contains the code used for our paper: Reinforcement Learning for
                    rl_script_args.seed= 1   
                    lamorel_args.llm_args.model_type="seq2seq"
                    rl_script_args.twc_levels= ./TWC-Medium #Directory of twc levels downloaded or created
-### Train single strategy $P_{all}$:
+### Train single strategy $\pi_{p=0:3}$:
         python3 -m lamorel_launcher.launch --config-path PROJECT_PATH/experiments/TWC/configs/ 
                    --config-name local_gpu_config        
                    rl_script_args.path=PROJECT_PATH/experiments/TWC/main_pAll.py
@@ -54,7 +54,7 @@ This repository contains the code used for our paper: Reinforcement Learning for
                    rl_script_args.seed= 1   
                    lamorel_args.llm_args.model_type="seq2seq"
                    rl_script_args.twc_levels= ./TWC-Medium #Directory of twc levels downloaded or created
-### Train single strategy $Contrastive_{P_i}$:
+### Train single strategy $\pi^{c={0:3}\ }_{p=0}$:
         python3 -m lamorel_launcher.launch --config-path PROJECT_PATH/experiments/TWC/configs/
                    --config-name "local_gpu_config"        
                    rl_script_args.path=PROJECT_PATH/experiments/TWC/main_Contrastive.py
